@@ -25,6 +25,7 @@ def pdf_a_epub(origen, destino):
         if documento.metadata.get("author"):
             libro.add_author(documento.metadata["author"])
         capitulos = []
+        omitidas = 0
         for numero, pagina in enumerate(documento, 1):
             parrafos = []
             for bloque in pagina.get_text("blocks", sort=True):
@@ -35,10 +36,8 @@ def pdf_a_epub(origen, destino):
                 if texto:
                     parrafos.append(f"<p>{escape(texto)}</p>")
             if not parrafos:
-                raise ValueError(
-                    f"La página {numero} no contiene texto extraíble. "
-                    "Esta versión no incluye OCR; tampoco convierte páginas solo con imágenes."
-                )
+                omitidas += 1
+                continue
             capitulo = epub.EpubHtml(
                 title=f"Página {numero}", file_name=f"pagina_{numero}.xhtml", lang="und"
             )
@@ -46,12 +45,13 @@ def pdf_a_epub(origen, destino):
             libro.add_item(capitulo)
             capitulos.append(capitulo)
         if not capitulos:
-            raise ValueError("El PDF no contiene páginas.")
+            raise ValueError("El PDF no contiene texto extraíble. No se ha generado un EPUB: esta versión no incluye OCR.")
         libro.toc = capitulos
         libro.spine = ["nav", *capitulos]
         libro.add_item(epub.EpubNcx())
         libro.add_item(epub.EpubNav())
         epub.write_epub(str(destino), libro, {"raise_exceptions": True})
+        return f"Páginas convertidas: {len(capitulos)}. Omitidas sin texto: {omitidas}."
 
 
 def epub_a_pdf(origen, destino):
@@ -75,8 +75,9 @@ def convertir(origen, destino):
     with tempfile.NamedTemporaryFile(dir=destino.parent, suffix=destino.suffix, delete=False) as archivo:
         temporal = Path(archivo.name)
     try:
-        funcion(origen, temporal)
+        resumen = funcion(origen, temporal)
         temporal.replace(destino)
+        return resumen
     finally:
         temporal.unlink(missing_ok=True)
 
@@ -107,7 +108,7 @@ class Aplicacion:
         self.elegir.pack(fill="x")
         self.boton = ttk.Button(marco, text="Convertir y guardar", command=self.iniciar, state="disabled")
         self.boton.pack(fill="x", pady=8)
-        self.estado = tk.StringVar(value="PDF → EPUB: solo texto, sin imágenes ni OCR.")
+        self.estado = tk.StringVar(value="PDF → EPUB: solo texto, sin imágenes ni OCR. Se omiten páginas sin texto.")
         ttk.Label(marco, textvariable=self.estado, wraplength=480).pack(anchor="w", pady=8)
         self.progreso = ttk.Progressbar(marco, mode="indeterminate")
         self.progreso.pack(fill="x")
@@ -147,13 +148,13 @@ class Aplicacion:
         self.boton.configure(state="normal")
         self.elegir.configure(state="normal")
         try:
-            self.tarea.result()
+            resumen = self.tarea.result()
         except Exception as error:
             self.estado.set("No se pudo convertir el archivo.")
             messagebox.showerror("Error de conversión", str(error))
         else:
             self.estado.set("Conversión completada.")
-            messagebox.showinfo("Archivo guardado", f"Guardado en:\n{destino}")
+            messagebox.showinfo("Archivo guardado", f"Guardado en:\n{destino}" + (f"\n\n{resumen}" if resumen else ""))
 
     def cerrar(self):
         if self.tarea and not self.tarea.done():

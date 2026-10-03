@@ -48,7 +48,7 @@ Para publicarlo en GitHub, sube el código y este README al repositorio. Adjunta
 ## Alcance de esta primera versión
 
 - **PDF → EPUB:** extrae bloques de texto, une sus líneas y crea una sección por página. El lector puede adaptar el tamaño de letra. No conserva imágenes, tablas, fuentes ni la maquetación original; pueden aparecer encabezados repetidos o un orden de lectura imperfecto en documentos con columnas.
-- No incluye OCR. Si una página no contiene texto extraíble, se detiene indicando el número, incluso si es una página en blanco, para evitar omisiones silenciosas.
+- No incluye OCR. Omite las imágenes y las páginas sin texto extraíble (escaneadas o en blanco) y continúa con el resto. Al terminar muestra cuántas páginas se convirtieron y cuántas se omitieron. En páginas mixtas conserva solo el texto extraíble. Si todo el PDF carece de texto extraíble, muestra un error y no genera un EPUB vacío.
 - **EPUB → PDF:** pagina el libro aproximadamente en A5, con letra base de 12 puntos. El resultado depende del contenido y CSS que soporte el motor; no garantiza reproducir toda la presentación del EPUB.
 - No admite PDF con contraseña ni libros con DRM. No elimina protecciones.
 - Sin procesamiento por lotes, edición ni pruebas unitarias en esta versión.
